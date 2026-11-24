@@ -1,0 +1,20 @@
+*.iml
+*.aab
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+keystore.jks
+keystore.properties
+/app/src/proprietary/assets/pesdk_android_license
+/app/src/proprietary/assets/vesdk_android_license
+fastlane/fastlane.json
+fastlane/report.xml
+.kotlin/
+
+# CI signing and release outputs
+release.keystore
+release-assets/
+__pycache__/

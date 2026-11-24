@@ -1,0 +1,49 @@
+name: CI
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+    branches: [main, beta]
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  release-tools:
+    name: Release tooling tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+  android:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Lint
+            task: ':app:lintFossDebug'
+            report: 'app/build/reports/lint-results-*'
+          - name: Unit tests
+            task: ':app:testFossDebugUnitTest'
+            report: 'app/build/reports/tests/testFossDebugUnitTest/'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/android-setup
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+      - name: Run checks
+        run: ./gradlew ${{ matrix.task }} --build-cache --no-daemon --stacktrace
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: check-${{ strategy.job-index }}-${{ github.run_id }}
+          path: ${{ matrix.report }}
+          retention-days: 14

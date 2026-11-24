@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/ai_search_toggle" android:checkable="true"
+        android:title="@string/ai_search_toggle" app:showAsAction="never" />
+    <item android:id="@+id/ai_search_settings" android:title="@string/ai_search_settings" app:showAsAction="never" />
+    <item
+        android:id="@+id/toggle_filename"
+        android:icon="@drawable/ic_label_vector"
+        android:title="@string/toggle_filename"
+        app:showAsAction="always" />
+</menu>

@@ -1,0 +1,14 @@
+name: Release Stable
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gallery-release
+  cancel-in-progress: false
+jobs:
+  release:
+    uses: ./.github/workflows/release.yml
+    with:
+      channel: stable
+    secrets: inherit
