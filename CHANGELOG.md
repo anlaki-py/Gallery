@@ -12,10 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scan media in the background with pause, resume and retry controls.
 
 ### Changed
+- Show the underlying model loading error instead of generic memory advice.
 - Replace the fake-app warning with a fork notice, author link and dismiss button.
 - Keep AI searches and media processing on your phone.
 - Install alongside Fossify Gallery with package `gallery.anlaki.dev`.
 - Publish signed beta and stable APKs with checksums and release notes.
+
+### Fixed
+- Restore generated database and image-loader components missing from beta 2.
 
 ## [1.14.3] - 2026-11-18
 ### Changed

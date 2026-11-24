@@ -59,10 +59,16 @@ object AiEmbeddingEngine {
         try { engine = create(context, cpu) }
         catch (e: Throwable) {
             if (e is VirtualMachineError && e !is OutOfMemoryError) throw e
-            if (cpu) throw EmbeddingEngineException("AI model could not load. Free memory, or download the model again.", e)
+            if (cpu) throw EmbeddingEngineException("AI model could not load on CPU: ${e.message ?: e.javaClass.simpleName}", e)
             cpu = true
             try { engine = create(context, true) }
-            catch (fallback: Throwable) { throw EmbeddingEngineException("AI model could not load on GPU or CPU. Free memory and try again.", fallback) }
+            catch (fallback: Throwable) {
+                if (fallback is VirtualMachineError && fallback !is OutOfMemoryError) throw fallback
+                fallback.addSuppressed(e)
+                throw EmbeddingEngineException(
+                    "AI model could not load on GPU or CPU: ${fallback.message ?: fallback.javaClass.simpleName}", fallback
+                )
+            }
         }
     }
 
