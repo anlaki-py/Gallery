@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fork_notice_title">About this fork</string>
+    <string name="fork_notice_message">You are using a fork of Fossify Gallery made by <a href="https://github.com/anlaki-py">anlaki</a>.</string>
+</resources>

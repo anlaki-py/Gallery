@@ -27,6 +27,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: Build logic tests
+            task: '-p buildSrc test'
+            report: 'buildSrc/build/reports/tests/test/'
           - name: Lint
             task: ':app:lintFossDebug'
             report: 'app/build/reports/lint-results-*'

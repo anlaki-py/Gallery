@@ -1,4 +1,7 @@
+import com.android.build.api.instrumentation.FramesComputationMode
+import com.android.build.api.instrumentation.InstrumentationScope
 import com.android.build.api.variant.FilterConfiguration
+import org.fossify.gallery.build.CommonsForkNoticeVisitorFactory
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.Properties
@@ -170,6 +173,15 @@ android {
 }
 
 androidComponents {
+    onVariants { variant ->
+        variant.instrumentation.transformClassesWith(
+            CommonsForkNoticeVisitorFactory::class.java,
+            InstrumentationScope.ALL
+        ) {}
+        variant.instrumentation.setAsmFramesComputationMode(
+            FramesComputationMode.COMPUTE_FRAMES_FOR_INSTRUMENTED_METHODS
+        )
+    }
     onVariants(selector().withBuildType("release").withFlavor("licensing" to "foss")) { variant ->
         variant.outputs.forEach { output ->
             val abi = output.filters.find {

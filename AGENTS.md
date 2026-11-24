@@ -22,8 +22,14 @@ Preserve upstream copyright, license and third-party notices.
   downloads, ZIP import and background work.
 - `app/src/main/res/`: Android layouts, strings and other resources.
 - `app/src/test/`: JVM and Robolectric behavior tests.
+- `buildSrc/`: A narrow Commons warning adapter and its bytecode tests.
 - `scripts/`: Release versioning, APK verification, metadata and script tests.
 - `.github/workflows/`: CI and manual stable/beta release entry points.
+
+Commons 7.1.3 hardcodes a fake-app warning and store redirect with no override
+hook. `CommonsForkNoticeVisitorFactory` replaces only that method during Android
+packaging with `ForkNoticeDialog.show`. Keep its upstream-signature guard and
+bytecode tests when updating Commons. Do not spoof the application ID to hide it.
 
 Release application ID is `gallery.anlaki.dev`; debug appends `.debug`. Keep the
 Kotlin namespace `org.fossify.gallery`. AI is off by default and runs on-device.
