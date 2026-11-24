@@ -2,6 +2,7 @@ package org.fossify.gallery.dialogs
 
 import android.app.Application
 import android.content.Intent
+import android.os.Looper
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.URLSpan
@@ -47,6 +48,7 @@ class ForkNoticeDialogTest {
         assertTrue(dialog.isShowing)
         assertEquals(activity.getString(android.R.string.ok), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
         assertFalse(dialog.isShowing)
         assertNull(shadowOf(activity).nextStartedActivity)
         assertFalse(activity.isFinishing)
