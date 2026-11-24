@@ -43,6 +43,7 @@ class AiSearchSettingsActivity : SimpleActivity() {
     private lateinit var scan: MaterialButton
     private lateinit var pause: MaterialButton
     private lateinit var retry: MaterialButton
+    private lateinit var errorReport: MaterialButton
     private lateinit var clear: MaterialButton
     private var downloadState: WorkInfo.State? = null
     private var importing = false
@@ -111,8 +112,14 @@ class AiSearchSettingsActivity : SimpleActivity() {
         pause = button(R.string.ai_scan_pause) { AiWork.pause(this); render() }
         retry = button(R.string.ai_retry_failed) {
             lifecycleScope.launch {
-                withContext(Dispatchers.IO) { AiIndexDatabase.get(applicationContext).retryFailures() }
-                AiWork.scan(this@AiSearchSettingsActivity, manual = true)
+                try {
+                    withContext(Dispatchers.IO) { AiIndexDatabase.get(applicationContext).retryFailures() }
+                    AiWork.scan(this@AiSearchSettingsActivity, manual = true)
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (e: Exception) {
+                    prefs.indexStatus = AiDiagnostics.record(this@AiSearchSettingsActivity, AiErrorCode.MAINTENANCE, e)
+                    render()
+                }
             }
         }
         clear = button(R.string.ai_clear_index) {
@@ -122,6 +129,20 @@ class AiSearchSettingsActivity : SimpleActivity() {
         }
         button(R.string.ai_manage_permissions) {
             startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri()))
+        }
+        paragraph(R.string.ai_error_report_description)
+        errorReport = button(R.string.ai_copy_error_report) {
+            val report = AiDiagnostics.lastReport(this)
+            if (report.isNotBlank()) {
+                val dialog = MaterialAlertDialogBuilder(this).setTitle(R.string.ai_error_report_title)
+                    .setMessage(report).setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.ai_copy_error_report) { _, _ ->
+                        getSystemService(android.content.ClipboardManager::class.java)
+                            .setPrimaryClip(android.content.ClipData.newPlainText(getString(R.string.ai_error_report_title), report))
+                        toast(R.string.ai_error_report_copied)
+                    }.show()
+                dialog.findViewById<TextView>(android.R.id.message)?.setTextIsSelectable(true)
+            }
         }
         paragraph(R.string.ai_background_note)
         WorkManager.getInstance(this).getWorkInfosForUniqueWorkLiveData(AiWork.DOWNLOAD).observe(this) {
@@ -140,7 +161,7 @@ class AiSearchSettingsActivity : SimpleActivity() {
                     try {
                         stats = withContext(Dispatchers.IO) { AiIndexDatabase.get(applicationContext).stats() }
                     } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                    catch (e: Exception) { prefs.indexStatus = e.message ?: "Cannot read the AI index. Try clearing it." }
+                    catch (e: Exception) { prefs.indexStatus = AiDiagnostics.record(this@AiSearchSettingsActivity, AiErrorCode.MAINTENANCE, e) }
                     render()
                     delay(1500)
                 }
@@ -178,11 +199,12 @@ class AiSearchSettingsActivity : SimpleActivity() {
                 requestNotifications()
                 withContext(Dispatchers.IO) { AiWork.importZip(applicationContext, uri).result.get() }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (_: SecurityException) {
+            catch (e: SecurityException) {
+                AiDiagnostics.record(this@AiSearchSettingsActivity, AiErrorCode.IMPORT, e)
                 prefs.downloadStatus = getString(R.string.ai_import_select_again)
                 toast(R.string.ai_import_select_again)
             } catch (e: Exception) {
-                prefs.downloadStatus = e.message ?: getString(R.string.ai_import_failed)
+                prefs.downloadStatus = AiDiagnostics.record(this@AiSearchSettingsActivity, AiErrorCode.IMPORT, e)
                 toast(R.string.ai_import_failed)
             } finally { maintenance = false; render() }
         }
@@ -199,8 +221,9 @@ class AiSearchSettingsActivity : SimpleActivity() {
                 AiEmbeddingEngine.release()
                 withContext(Dispatchers.IO) { AiIndexDatabase.get(applicationContext).clear() }
                 prefs.indexStatus = getString(R.string.ai_index_cleared)
-            } catch (e: Exception) {
-                prefs.indexStatus = e.message ?: "Could not clear the index. Try again."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) {
+                prefs.indexStatus = AiDiagnostics.record(this@AiSearchSettingsActivity, AiErrorCode.MAINTENANCE, e)
             } finally { maintenance = false; render() }
         }
     }
@@ -217,14 +240,16 @@ class AiSearchSettingsActivity : SimpleActivity() {
                 withContext(Dispatchers.IO) { AiModelStore.remove(applicationContext) }
                 prefs.paused = wasPaused
                 AiWork.download(this@AiSearchSettingsActivity)
-            } catch (e: Exception) {
-                prefs.downloadStatus = e.message ?: "Cannot remove the model. Try again."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) {
+                prefs.downloadStatus = AiDiagnostics.record(this@AiSearchSettingsActivity, AiErrorCode.MAINTENANCE, e)
             } finally { maintenance = false; render() }
         }
     }
 
     private fun render() {
         if (!::download.isInitialized || !::clear.isInitialized) return
+        if (::errorReport.isInitialized) errorReport.isEnabled = AiDiagnostics.lastReport(this).isNotBlank()
         val ready = AiModelStore.ready(this)
         val downloading = downloadState?.isFinished == false
         val scanning = indexState?.isFinished == false

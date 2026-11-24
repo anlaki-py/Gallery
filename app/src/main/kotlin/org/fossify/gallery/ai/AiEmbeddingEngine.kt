@@ -14,7 +14,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-class EmbeddingEngineException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class EmbeddingEngineException(message: String, cause: Throwable? = null, val code: AiErrorCode? = null) : Exception(message, cause)
 
 /** All native create/infer/close calls use one thread, including GPU fallback and idle cleanup. */
 object AiEmbeddingEngine {
@@ -46,8 +46,8 @@ object AiEmbeddingEngine {
     }
 
     private fun prepare(context: Context) {
-        if (!android.os.Process.is64Bit()) throw EmbeddingEngineException("AI search requires a 64-bit Android installation.")
-        check(AiModelStore.ready(context)) { "Download or import the AI model in Settings first." }
+        if (!android.os.Process.is64Bit()) throw failure(context, AiErrorCode.UNSUPPORTED_PROCESS, IllegalStateException("Unsupported process"))
+        if (!AiModelStore.ready(context)) throw failure(context, AiErrorCode.MODEL_MISSING, IllegalStateException("Model not ready"))
         val requestedCpu = AiPreferences(context).cpuOnly
         if (engine != null && configuredCpuOnly != requestedCpu) closeNative()
         if (engine != null) return
@@ -59,15 +59,13 @@ object AiEmbeddingEngine {
         try { engine = create(context, cpu) }
         catch (e: Throwable) {
             if (e is VirtualMachineError && e !is OutOfMemoryError) throw e
-            if (cpu) throw EmbeddingEngineException("AI model could not load on CPU: ${e.message ?: e.javaClass.simpleName}", e)
+            if (cpu) throw failure(context, AiErrorCode.LOAD_CPU, e)
             cpu = true
             try { engine = create(context, true) }
             catch (fallback: Throwable) {
                 if (fallback is VirtualMachineError && fallback !is OutOfMemoryError) throw fallback
                 fallback.addSuppressed(e)
-                throw EmbeddingEngineException(
-                    "AI model could not load on GPU or CPU: ${fallback.message ?: fallback.javaClass.simpleName}", fallback
-                )
+                throw failure(context, AiErrorCode.LOAD_FALLBACK, fallback)
             }
         }
     }
@@ -88,7 +86,7 @@ object AiEmbeddingEngine {
             if (e is VirtualMachineError && e !is OutOfMemoryError) throw e
             if (cpu || e is OutOfMemoryError) {
                 closeNative()
-                throw EmbeddingEngineException("AI inference failed. Free memory or enable CPU mode in AI settings, then retry.", e)
+                throw failure(context, AiErrorCode.INFERENCE, e)
             }
             closeNative()
             cpu = true
@@ -96,11 +94,16 @@ object AiEmbeddingEngine {
                 engine = create(context, true)
                 return EmbeddingMath.normalized(operation(checkNotNull(engine)) ?: error("Model returned no embedding"))
             } catch (fallback: Throwable) {
+                if (fallback is VirtualMachineError && fallback !is OutOfMemoryError) throw fallback
                 closeNative()
-                throw EmbeddingEngineException("AI inference failed on GPU and CPU. Try again after freeing memory.", fallback)
+                fallback.addSuppressed(e)
+                throw failure(context, AiErrorCode.INFERENCE_FALLBACK, fallback)
             }
         } finally { lastUsed = elapsed }
     }
+
+    private fun failure(context: Context, code: AiErrorCode, cause: Throwable): EmbeddingEngineException =
+        EmbeddingEngineException(AiDiagnostics.record(context, code, cause), cause, code)
 
     suspend fun release() = withContext(dispatcher) { closeNative() }
 

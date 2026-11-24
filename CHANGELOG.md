@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Copy AI error reports with error codes and model loading details.
 - Find photos and videos by describing what is in them.
 - Download the AI model or import it from an Edge Gallery ZIP.
 - Scan media in the background with pause, resume and retry controls.

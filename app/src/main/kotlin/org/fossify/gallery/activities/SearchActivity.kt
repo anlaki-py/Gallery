@@ -193,7 +193,7 @@ class SearchActivity : SimpleActivity(), MediaOperationsListener {
             catch (e: Exception) {
                 if (ai) {
                     showResults(arrayListOf())
-                    binding.searchAiStatus.text = getString(R.string.ai_search_error, e.message ?: "Try again")
+                    binding.searchAiStatus.text = getString(R.string.ai_search_error, AiDiagnostics.record(applicationContext, AiErrorCode.SEARCH, e))
                 }
             }
         }

@@ -70,6 +70,13 @@ jobs:
           ./gradlew :app:assembleFossRelease --build-cache --no-daemon --stacktrace
           -PABI_SPLITS=true -PciBuild
           -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME"
+      - name: Save release mapping for AI error traces
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: release-mapping-${{ needs.version.outputs.tag }}
+          path: app/build/outputs/mapping/fossRelease/mapping.txt
+          retention-days: 90
+          if-no-files-found: error
       - name: Verify signatures and prepare release assets
         env:
           RELEASE_CHANNEL: ${{ inputs.channel }}

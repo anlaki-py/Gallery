@@ -124,7 +124,7 @@ class AiModelDownloadWorker(context: Context, parameters: WorkerParameters) : Co
             Result.success()
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
-            prefs.downloadStatus = e.message ?: "Download failed. Check storage and network, then retry."
+            prefs.downloadStatus = AiDiagnostics.record(applicationContext, AiErrorCode.DOWNLOAD, e)
             val retryable = (e is ModelDownloadException && e.retryable) || (e is IOException && e !is ModelDownloadException)
             if (retryable && runAttemptCount < 5) Result.retry() else Result.failure()
         }
@@ -138,8 +138,8 @@ class AiIndexWorker(context: Context, parameters: WorkerParameters) : CoroutineW
         val context = applicationContext
         val prefs = AiPreferences(context)
         if (!prefs.enabled || prefs.paused || !AiModelStore.ready(context)) return@withContext Result.success()
-        val db = AiIndexDatabase.get(context)
         try {
+            val db = AiIndexDatabase.get(context)
             setForeground(getForegroundInfo())
             prefs.indexStatus = context.getString(R.string.ai_checking_media)
             val coroutineContext = currentCoroutineContext()
@@ -166,6 +166,7 @@ class AiIndexWorker(context: Context, parameters: WorkerParameters) : CoroutineW
                     checkCancelled()
                     if (AiMediaReader.unchanged(context, item)) db.save(item, vectors)
                 } catch (e: MediaDecodeException) {
+                    AiDiagnostics.record(context, AiErrorCode.MEDIA, e)
                     db.failed(item, e.message ?: "Unreadable media")
                 } catch (e: SecurityException) {
                     throw IOException("Media access changed. Grant Gallery access again, then scan.", e)
@@ -185,11 +186,11 @@ class AiIndexWorker(context: Context, parameters: WorkerParameters) : CoroutineW
             Result.success()
         } catch (e: CancellationException) { throw e }
         catch (e: OutOfMemoryError) {
-            prefs.indexStatus = "Not enough memory. Close other apps, enable CPU mode, then resume scanning."
+            prefs.indexStatus = AiDiagnostics.record(context, AiErrorCode.INDEX, e)
             AiEmbeddingEngine.release()
             Result.failure()
         } catch (e: Exception) {
-            prefs.indexStatus = e.message ?: "Scanning failed. Please try again."
+            prefs.indexStatus = AiDiagnostics.record(context, AiErrorCode.INDEX, e)
             if (e is IOException && runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }

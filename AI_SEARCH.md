@@ -84,3 +84,19 @@ The General settings entry now uses the same row container and label styles as i
 ## Debug update compatibility
 
 The earlier debug rebuild was version `1.14.3-ai2`, version code 51. Current release versions and signed beta/stable builds follow [RELEASING.md](RELEASING.md). See `debug-signing/README.md`: it includes a reusable development signing key for future updates. The previous workspace-generated key was removed during environment maintenance. Uninstall the older AI debug build before installing this one for the first time. This does not require removing official Fossify Gallery.
+
+## Copy an AI error report
+
+After an AI failure, open Settings → AI natural language search → **Copy AI error report**.
+Preview the report and tap **Copy AI error report** in the dialog, then paste it into your bug report.
+The latest failure stays saved across app restarts. Reports include a stable error code,
+app version, Android/device details, model verification status, runtime versions and exception
+traces, including GPU/CPU fallback causes. Model startup messages retain the native runtime's
+reason with paths and URLs removed. Messages from operations that handle media or queries are
+omitted; exception types and stack frames are retained. Nothing is uploaded automatically.
+
+Codes `AI-1xx` cover model prerequisites, `AI-2xx` model loading, `AI-3xx` inference,
+`AI-4xx` download/import and `AI-5xx` scanning/search/index maintenance. The report only covers
+caught failures; a native process crash cannot produce a Kotlin exception report.
+Release workflows retain the R8 mapping as a private Actions artifact for 90 days so
+obfuscated runtime frames can be decoded against the exact release.

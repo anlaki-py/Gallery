@@ -61,4 +61,8 @@
     <string name="ai_settings_disabled">AI search is disabled. Enable it to download the model and scan.</string>
     <string name="ai_background_note">Android may defer background work. Force-stopping Gallery pauses work until it is opened again. Completed files are saved after each item.</string>
     <string name="ai_requires_64bit">AI search requires a 64-bit Android installation. Filename search is available on this device.</string>
+    <string name="ai_error_report_title">AI error report</string>
+    <string name="ai_copy_error_report">Copy AI error report</string>
+    <string name="ai_error_report_description">After an AI error, preview and copy the latest report here. It includes the error code, app and device details, model status and exception trace. Photos, media names and search text are excluded. Nothing is sent automatically.</string>
+    <string name="ai_error_report_copied">AI error report copied</string>
 </resources>

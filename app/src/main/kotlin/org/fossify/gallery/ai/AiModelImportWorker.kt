@@ -76,11 +76,12 @@ class AiModelImportWorker(context: Context, parameters: WorkerParameters) : Coro
         } catch (e: CancellationException) {
             throw e
         } catch (e: SecurityException) {
+            AiDiagnostics.record(context, AiErrorCode.IMPORT, e)
             prefs.downloadStatus = context.getString(R.string.ai_import_select_again)
             Result.failure()
         } catch (e: Exception) {
             if (isStopped || !prefs.enabled) throw CancellationException()
-            prefs.downloadStatus = e.message ?: context.getString(R.string.ai_import_failed)
+            prefs.downloadStatus = AiDiagnostics.record(context, AiErrorCode.IMPORT, e)
             Result.failure()
         } finally {
             archive?.delete()
