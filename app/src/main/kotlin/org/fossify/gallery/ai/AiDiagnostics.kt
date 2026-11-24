@@ -60,7 +60,8 @@ object AiDiagnostics {
             append(formatException(error, code == AiErrorCode.LOAD_CPU || code == AiErrorCode.LOAD_FALLBACK))
         }.take(LIMIT)
         preferences(context).edit().putString(KEY, details).apply()
-        return "[${code.id}] ${code.summary} Open AI settings and tap Copy AI error report."
+        val summary = if (error is ModelDownloadException || error is ModelImportException) error.message ?: code.summary else code.summary
+        return "[${code.id}] $summary Open AI settings and tap Copy AI error report."
     }
 
     internal fun formatException(error: Throwable, includeMessages: Boolean): String = buildString {
@@ -68,7 +69,7 @@ object AiDiagnostics {
         fun write(value: Throwable, label: String, depth: Int) {
             if (length >= LIMIT || depth > 16 || !seen.add(value)) return
             appendLine("$label${value.javaClass.name}")
-            if (includeMessages) {
+            if (includeMessages || value is ModelDownloadException || value is ModelImportException) {
                 val message = value.message.orEmpty().take(8_000)
                     .replace(Regex("(?:content|file|https?)://\\S+"), "[URI]")
                     .replace(Regex("/[^\\s\"']+"), "[path]")

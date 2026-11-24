@@ -92,8 +92,8 @@ Preview the report and tap **Copy AI error report** in the dialog, then paste it
 The latest failure stays saved across app restarts. Reports include a stable error code,
 app version, Android/device details, model verification status, runtime versions and exception
 traces, including GPU/CPU fallback causes. Model startup messages retain the native runtime's
-reason with paths and URLs removed. Messages from operations that handle media or queries are
-omitted; exception types and stack frames are retained. Nothing is uploaded automatically.
+reason with paths and URLs removed. Known download/import validation messages are retained. Other messages from operations
+that handle media or queries are omitted; exception types and stack frames are retained. Nothing is uploaded automatically.
 
 Codes `AI-1xx` cover model prerequisites, `AI-2xx` model loading, `AI-3xx` inference,
 `AI-4xx` download/import and `AI-5xx` scanning/search/index maintenance. The report only covers

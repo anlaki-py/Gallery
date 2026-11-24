@@ -83,6 +83,17 @@ class AiDiagnosticsTest {
     }
 
     @Test
+    fun downloadReportsRetainHttpReasonButOmitUnknownCauseMessages() {
+        val error = ModelDownloadException("Download failed (HTTP 403).")
+        error.initCause(IllegalStateException("https://host/private?token=secret"))
+        val status = AiDiagnostics.record(context, AiErrorCode.DOWNLOAD, error)
+        val report = AiDiagnostics.lastReport(context)
+        assertTrue(status.contains("HTTP 403"))
+        assertTrue(report.contains("HTTP 403"))
+        assertFalse(report.contains("token=secret"))
+    }
+
+    @Test
     fun noFailureHasNoStaleOrInventedReport() {
         assertEquals("", AiDiagnostics.lastReport(context))
     }
