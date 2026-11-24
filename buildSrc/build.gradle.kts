@@ -9,9 +9,12 @@ java {
 dependencies {
     // The full plugin adds its own Kotlin plugin to every app build's classpath.
     implementation(libs.plugins.android.map { "com.android.tools.build:gradle-api:${it.version}" }) {
-        isTransitive = false
+        exclude(group = "com.android.tools.build", module = "gradle")
     }
-    implementation("org.ow2.asm:asm:9.9")
+    // API types live in buildSrc's parent classloader; keep them aligned with the app plugin.
+    implementation(libs.plugins.kotlin.android.map {
+        "org.jetbrains.kotlin:kotlin-gradle-plugin-api:${it.version}"
+    })
     testImplementation("junit:junit:4.13.2")
 }
 
