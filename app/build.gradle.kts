@@ -37,6 +37,17 @@ if (providers.gradleProperty("ciBuild").isPresent) {
 val supportedAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
 val abiSplits = providers.gradleProperty("ABI_SPLITS").map(String::toBoolean).getOrElse(false)
 
+val robolectricSdk by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    isTransitive = false
+}
+val robolectricSdkDirectory = layout.buildDirectory.dir("robolectric-sdk")
+val prepareRobolectricSdk by tasks.registering(Sync::class) {
+    from(robolectricSdk)
+    into(robolectricSdkDirectory)
+}
+
 base {
     archivesName = "gallery-$baseVersionCode"
 }
@@ -87,7 +98,10 @@ android {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
             it.maxHeapSize = "1g"
-            it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+            it.dependsOn(prepareRobolectricSdk)
+            it.inputs.files(robolectricSdk).withPropertyName("robolectricSdk")
+            it.systemProperty("robolectric.offline", "true")
+            it.systemProperty("robolectric.dependency.dir", robolectricSdkDirectory.get().asFile.absolutePath)
         }
     }
 
@@ -201,6 +215,8 @@ detekt {
 }
 
 dependencies {
+    // All Robolectric tests use API 34. Resolve it through Gradle's cache, before the test JVM starts.
+    add(robolectricSdk.name, "org.robolectric:android-all-instrumented:14-robolectric-10818077-i7")
     implementation("androidx.work:work-runtime-ktx:2.11.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("com.google.mediapipe:tasks-retrieval:1.2.0")

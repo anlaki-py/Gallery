@@ -40,6 +40,12 @@ Do not upload media or queries. Model download is the only AI network request.
 There is no local Android build setup in this workspace. Do not install an SDK,
 Gradle distribution or other Android build tools. Use GitHub Actions to verify
 Android changes, and inspect the actual results before reporting success.
+Robolectric tests use API 34. `prepareRobolectricSdk` resolves the pinned Android
+runtime through Gradle and its cache, using Google's Maven Central mirror for
+that module only. Tests use `robolectric.offline=true`; update the pinned runtime
+if changing test SDKs or Robolectric's instrumentation version. Keep this setup
+so test JVMs do not fetch uncached SDK jars and hit Maven Central rate limits.
+
 Python release tooling tests can run locally:
 
 ```sh
