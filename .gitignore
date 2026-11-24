@@ -19,5 +19,5 @@ release.keystore
 release-assets/
 __pycache__/
 
-/buildSrc/build/
-/buildSrc/.gradle/
+/build-logic/build/
+/build-logic/.gradle/
