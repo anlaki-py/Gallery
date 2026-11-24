@@ -22,7 +22,7 @@ Preserve upstream copyright, license and third-party notices.
   downloads, ZIP import and background work.
 - `app/src/main/res/`: Android layouts, strings and other resources.
 - `app/src/test/`: JVM and Robolectric behavior tests.
-- `buildSrc/`: A narrow Commons warning adapter and its bytecode tests.
+- `build-logic/`: A narrow Commons warning adapter and its bytecode tests.
 - `scripts/`: Release versioning, APK verification, metadata and script tests.
 - `.github/workflows/`: CI and manual stable/beta release entry points.
 

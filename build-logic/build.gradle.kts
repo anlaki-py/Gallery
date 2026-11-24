@@ -1,5 +1,5 @@
 plugins {
-    `java-library`
+    `java-gradle-plugin`
 }
 
 java {
@@ -7,8 +7,7 @@ java {
 }
 
 dependencies {
-    // Runtime AGP APIs in buildSrc hide KSP's Android plugin callbacks in the app build.
-    // The app's Android plugin supplies these types when it loads the visitor factory.
+    // Keep AGP out of the runtime; the app plugin supplies it in the shared plugin classloader.
     compileOnly(libs.plugins.android.map { "com.android.tools.build:gradle-api:${it.version}" })
     implementation("org.ow2.asm:asm:9.9")
     testImplementation("junit:junit:4.13.2")
@@ -26,4 +25,14 @@ val verifyBuildLogicClasspath by tasks.registering {
 
 tasks.test {
     dependsOn(verifyBuildLogicClasspath)
+}
+
+
+gradlePlugin {
+    plugins {
+        create("forkNotice") {
+            id = "gallery.fork-notice"
+            implementationClass = "org.fossify.gallery.build.CommonsForkNoticePlugin"
+        }
+    }
 }
