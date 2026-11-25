@@ -23,7 +23,7 @@ native <methods>;
 -keep class com.github.ajalt.reprint.module.** { *; }
 
 # MediaPipe Protobuf schemas reflect on fields such as SystemInfo.platform_.
-# Keep the schema methods too: keeping fields alone still lets R8 remove this schema's instance fields.
--keep class * extends com.google.protobuf.GeneratedMessageLite {
-    *;
+# Upstream rule: https://github.com/protocolbuffers/protobuf/blob/main/java/lite/proguard.pgcfg
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
+    <fields>;
 }

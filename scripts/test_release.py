@@ -7,25 +7,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from release import ABIS, assets, determine_version, release_notes, verify_apk, verify_ai_mapping
+from release import ABIS, assets, determine_version, release_notes, verify_apk
 
 
 class ReleaseTests(unittest.TestCase):
-    def test_ai_mapping_accepts_retained_field_with_obfuscated_class(self):
-        verify_ai_mapping('com.google.mediapipe.proto.MediaPipeLoggingProto$SystemInfo -> le3:\n'
-                          '# {"id":"sourceFile","fileName":"MediaPipeLoggingProto.java"}\n'
-                          '    int platform_ -> platform_\n'
-                          'another.Class -> z:\n')
-
-    def test_ai_mapping_rejects_removed_renamed_or_wrong_class_field(self):
-        message = 'com.google.mediapipe.proto.MediaPipeLoggingProto$SystemInfo'
-        for mapping in ['', f'{message} -> le3:\n    int platform_ -> a\n',
-                        f'{message} -> le3:\n    java.lang.Object DEFAULT_INSTANCE -> q\n',
-                        f'{message} -> R8$$REMOVED$$CLASS$$1:\n    int platform_ -> platform_\n',
-                        f'{message} -> le3:\nother.Class -> z:\n    int platform_ -> platform_\n']:
-            with self.subTest(mapping=mapping), self.assertRaisesRegex(ValueError, 'SystemInfo.platform_'):
-                verify_ai_mapping(mapping)
-
     def test_beta_counter_ignores_other_versions_and_stable_tags(self):
         result = determine_version('beta', 'beta', '1.14.3',
                                    ['v1.14.2', 'v1.14.3-beta.1', 'v1.14.3-beta.9',
@@ -108,7 +93,7 @@ class ReleaseTests(unittest.TestCase):
                 output.mkdir(parents=True)
                 for abi in ABIS:
                     (output / f'gallery-{abi}-release.apk').write_bytes(abi.encode())
-                with patch.dict(os.environ, environment), patch('release.verify_apk', return_value='a' * 64):
+                with patch.dict(os.environ, environment), patch('release.verify_apk', return_value='a' * 64), patch('release.verify_ai_apk'):
                     assets()
                 metadata = json.loads(Path('release-assets/release-metadata.json').read_text())
                 self.assertEqual(metadata['releaseNotes'], '### Added\n- Local search')
@@ -122,12 +107,12 @@ class ReleaseTests(unittest.TestCase):
                     self.assertIn(f"{record['sha256']}  {record['file']}", checksums)
                     self.assertTrue(Path('release-assets', record['file']).is_file())
                 # Mixed signing keys must stop asset preparation, before tagging.
-                with patch.dict(os.environ, environment), patch('release.verify_apk', side_effect=['a' * 64, 'b' * 64]):
+                with patch.dict(os.environ, environment), patch('release.verify_apk', side_effect=['a' * 64, 'b' * 64]), patch('release.verify_ai_apk'):
                     with self.assertRaises(ValueError):
                         assets()
                 # A signed APK must still be rejected when R8 removed a reflected AI field.
-                mapping.write_text('com.google.mediapipe.proto.MediaPipeLoggingProto$SystemInfo -> a:\n')
-                with patch.dict(os.environ, environment), patch('release.verify_apk') as verify:
+                with patch.dict(os.environ, environment), patch('release.verify_apk') as verify, \
+                        patch('release.verify_ai_apk', side_effect=ValueError('SystemInfo.platform_ missing')):
                     with self.assertRaisesRegex(ValueError, 'SystemInfo.platform_'):
                         assets()
                     verify.assert_not_called()

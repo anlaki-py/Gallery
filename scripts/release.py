@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import sys
 import time
+import tempfile
+import zipfile
 from datetime import datetime, timezone
 
 ABIS = ('arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', 'universal')
@@ -96,16 +98,33 @@ def verify_apk(path, tools, version_name, version_code):
     return certificates[0].lower()
 
 
-def verify_ai_mapping(mapping):
-    """Reject the release-only AI startup regression before creating assets or a tag."""
+def ai_message_descriptor(mapping):
+    """Resolve the message name; R8 may omit mappings for unchanged fields."""
     message = 'com.google.mediapipe.proto.MediaPipeLoggingProto$SystemInfo'
-    in_message = False
-    for line in mapping.splitlines():
-        if line and not line.startswith((' ', '\t', '#')):
-            in_message = line.startswith(f'{message} -> ') and 'R8$$REMOVED' not in line
-        elif in_message and re.fullmatch(r'\s+\S+ platform_ -> platform_', line):
-            return
-    raise ValueError('AI startup Protobuf field SystemInfo.platform_ is missing or renamed in R8 mapping')
+    match = re.search(rf'^{re.escape(message)} -> ([^:]+):$', mapping, re.M)
+    if not match or 'R8$$REMOVED' in match[1]:
+        raise ValueError('AI startup Protobuf SystemInfo class is missing from R8 mapping')
+    return 'L' + match[1].replace('.', '/') + ';'
+
+
+def verify_ai_apk(path, tools, descriptor):
+    """Check declared DEX fields, not just string references or R8 mapping entries."""
+    with zipfile.ZipFile(path) as archive, tempfile.TemporaryDirectory() as directory:
+        for name in archive.namelist():
+            if not re.fullmatch(r'classes(?:[2-9]|[1-9][0-9]+)?\.dex', name):
+                continue
+            dex = Path(directory) / name
+            dex.write_bytes(archive.read(name))
+            dump = run(str(tools / 'dexdump'), str(dex))
+            for section in re.split(r'(?m)^Class #\d+\b', dump):
+                found = re.search(r"Class descriptor\s*:\s*'([^']+)'", section)
+                if not found or found[1] != descriptor:
+                    continue
+                fields = re.search(r'Instance fields\s*-(.*?)(?:Direct methods|Virtual methods|\Z)', section, re.S)
+                if fields and re.search(r"name\s*:\s*'platform_'\s+type\s*:\s*'I'", fields[1]):
+                    return
+                raise ValueError(f'{path.name}: AI startup field SystemInfo.platform_ is missing or renamed in DEX')
+    raise ValueError(f'{path.name}: AI startup SystemInfo class is missing from DEX')
 
 
 def assets():
@@ -117,7 +136,7 @@ def assets():
         raise ValueError('Inconsistent release channel or tag')
     repository = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}"
     tools = Path(os.environ['ANDROID_HOME']) / 'build-tools' / '36.0.0'
-    verify_ai_mapping(Path('app/build/outputs/mapping/fossRelease/mapping.txt').read_text())
+    descriptor = ai_message_descriptor(Path('app/build/outputs/mapping/fossRelease/mapping.txt').read_text())
     destination = Path('release-assets')
     destination.mkdir(exist_ok=True)
     section = 'Unreleased' if channel == 'beta' else version_name
@@ -126,6 +145,7 @@ def assets():
     records = []
     for abi in ABIS:
         source = Path(f'app/build/outputs/apk/foss/release/gallery-{abi}-release.apk')
+        verify_ai_apk(source, tools, descriptor)
         cert = verify_apk(source, tools, version_name, code)
         if certificate is not None and certificate != cert:
             raise ValueError('Release APKs must share the same signing certificate')

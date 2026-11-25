@@ -27,9 +27,9 @@ All APK variants use the same version code, package and signing certificate.
 
 Both release workflows reject the wrong branch or missing changelog notes before
 building. They run their own lint and unit test gates, then build the FOSS flavor.
-Release scripts also run in CI. Asset preparation checks the R8 mapping for the
-MediaPipe `SystemInfo.platform_` field, which Protobuf reads by reflection. A missing
-or renamed field stops publishing before tag creation. No local Android build is required.
+Release scripts also run in CI. Asset preparation resolves the MediaPipe `SystemInfo` class through the R8 mapping
+and checks its declared `platform_` field in every APK with `dexdump`. Protobuf reads
+this field by reflection. A missing or renamed field stops publishing before tag creation. No local Android build is required.
 
 Each release includes signed arm64-v8a, armeabi-v7a, x86, x86_64 and universal APKs,
 SHA-256 checksums and `release-metadata.json`. The metadata contains the exact
