@@ -96,6 +96,18 @@ def verify_apk(path, tools, version_name, version_code):
     return certificates[0].lower()
 
 
+def verify_ai_mapping(mapping):
+    """Reject the release-only AI startup regression before creating assets or a tag."""
+    message = 'com.google.mediapipe.proto.MediaPipeLoggingProto$SystemInfo'
+    in_message = False
+    for line in mapping.splitlines():
+        if line and not line.startswith((' ', '\t', '#')):
+            in_message = line.startswith(f'{message} -> ') and 'R8$$REMOVED' not in line
+        elif in_message and re.fullmatch(r'\s+\S+ platform_ -> platform_', line):
+            return
+    raise ValueError('AI startup Protobuf field SystemInfo.platform_ is missing or renamed in R8 mapping')
+
+
 def assets():
     channel = os.environ['RELEASE_CHANNEL']
     tag = os.environ['RELEASE_TAG']
@@ -105,6 +117,7 @@ def assets():
         raise ValueError('Inconsistent release channel or tag')
     repository = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}"
     tools = Path(os.environ['ANDROID_HOME']) / 'build-tools' / '36.0.0'
+    verify_ai_mapping(Path('app/build/outputs/mapping/fossRelease/mapping.txt').read_text())
     destination = Path('release-assets')
     destination.mkdir(exist_ok=True)
     section = 'Unreleased' if channel == 'beta' else version_name

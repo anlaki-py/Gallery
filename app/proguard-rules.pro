@@ -21,3 +21,9 @@ native <methods>;
 
 # Reprint
 -keep class com.github.ajalt.reprint.module.** { *; }
+
+# Protobuf Lite builds schemas by reflecting on generated field names, including MediaPipe SystemInfo.
+# Upstream rule: https://github.com/protocolbuffers/protobuf/blob/main/java/lite/proguard.pgcfg
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
+    <fields>;
+}

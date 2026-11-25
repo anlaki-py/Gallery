@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Publish signed beta and stable APKs with checksums and release notes.
 
 ### Fixed
+- Prevent release optimization from breaking AI model loading.
 - Restore generated database and image-loader components missing from beta 2.
 
 ## [1.14.3] - 2026-11-18
